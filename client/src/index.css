@@ -824,7 +824,6 @@ button {
   font-size: 0.8rem;
   opacity: 0.75;
 }
-{/*Expense Start*/}
 @import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
 
 :root {
@@ -848,8 +847,7 @@ body {
 
 .container {
   margin: 30px auto;
-  width: 332px;
-  padding-left: 12px;
+  width: 350px;
 }
 
 h1 {

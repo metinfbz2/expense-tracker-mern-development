@@ -1,26 +1,49 @@
-import React, { createContext, useReducer } from 'react';
+import React, { createContext, useReducer, useState, useEffect, useRef } from 'react';
 import AppReducer from './AppReducer';
 import axios from 'axios';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-// Initial state
 const initialState = {
   transactions: [],
   error: null,
   loading: true
 }
 
-// Create context
 export const GlobalContext = createContext(initialState);
 
-// Provider component
 export const GlobalProvider = ({ children }) => {
   const [state, dispatch] = useReducer(AppReducer, initialState);
+  const [user, setUser] = useState(null);
+  const isMounted = useRef(true);
 
-  // Actions
+  useEffect(() => {
+    getTransactions();
+  }, []);
+
+  useEffect(() => {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (isMounted.current) {
+        if (user) {
+          setUser({
+            uid: user.uid,
+            displayName: user.email,
+            email: user.email,
+          });
+        } else {
+          setUser(null);
+        }
+      }
+    });
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [isMounted]);
+
   async function getTransactions() {
     try {
       const res = await axios.get('/api/v1/transactions');
-      console.log(res.data.data)
 
       dispatch({
         type: 'GET_TRANSACTIONS',
@@ -72,14 +95,17 @@ export const GlobalProvider = ({ children }) => {
     }
   }
 
-  return (<GlobalContext.Provider value={{
-    transactions: state.transactions,
-    error: state.error,
-    loading: state.loading,
-    getTransactions,
-    deleteTransaction,
-    addTransaction
-  }}>
-    {children}
-  </GlobalContext.Provider>);
+  return (
+    <GlobalContext.Provider value={{
+      transactions: state.transactions,
+      error: state.error,
+      loading: state.loading,
+      user,
+      getTransactions,
+      deleteTransaction,
+      addTransaction
+    }}>
+      {children}
+    </GlobalContext.Provider>
+  );
 }

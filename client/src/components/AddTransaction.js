@@ -1,36 +1,11 @@
-import React, {useState, useContext, useEffect} from 'react'
+import React, {useState, useContext} from 'react'
 import { GlobalContext } from '../context/GlobalState';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 export const AddTransaction = () => {
   const [text, setText] = useState('');
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState(0);
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    const auth = getAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser({
-          uid: currentUser.uid,
-          displayName: currentUser.displayName,
-          email: currentUser.email,
-          photoURL: currentUser.photoURL,
-        });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      // Clean up the subscription when the component unmounts
-      unsubscribe();
-    };
-  }, []);
-
-
-  const { addTransaction } = useContext(GlobalContext);
+  const {addTransaction, user } = useContext(GlobalContext);
 
   const onSubmit = e => {
     e.preventDefault();

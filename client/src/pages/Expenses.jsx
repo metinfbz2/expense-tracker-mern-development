@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { Balance } from '../components/Balance';
 import { IncomeExpenses } from '../components/IncomeExpenses';
@@ -10,25 +9,7 @@ import { GlobalProvider } from '../context/GlobalState';
 function Expenses() {
   const auth = getAuth();
   
-  const [formData, setFormData] = useState({});
   
-  //const { name, email } = formData;
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFormData({
-          name: user.displayName || '',
-          email: user.email || '',
-        });
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [auth]);
-
   const navigate = useNavigate();
   const onLogout = () => {
     auth.signOut();
