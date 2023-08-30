@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, useState, useEffect, useRef } from 'react';
+import React, { createContext, useReducer, useEffect, useState, useRef } from 'react';
 import AppReducer from './AppReducer';
 import axios from 'axios';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -13,11 +13,16 @@ export const GlobalContext = createContext(initialState);
 
 export const GlobalProvider = ({ children }) => {
   const [state, dispatch] = useReducer(AppReducer, initialState);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // Updated initial state
   const isMounted = useRef(true);
 
   useEffect(() => {
-    getTransactions();
+    if (isMounted.current) {
+      getTransactions();
+    }
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -35,35 +40,40 @@ export const GlobalProvider = ({ children }) => {
         }
       }
     });
-
-    return () => {
-      isMounted.current = false;
-    };
-  }, [isMounted]);
+  }, []); // Removed isMounted dependency from here
 
   async function getTransactions() {
     try {
-      const res = await axios.get('/api/v1/transactions');
-
+      const res = await axios.get('https://firestore.googleapis.com/v1/projects/myexpenses-692cf/databases/(default)/documents/expenses');
+      const documents = res.data.documents;
+      
+      const convertedData = documents.map(doc => ({
+        text: doc.fields.text.stringValue,
+        amount: doc.fields.amount.doubleValue,
+        email: doc.fields.email.stringValue,
+        createdAt: doc.createTime,
+        _id: doc.name.split('/').pop()
+      }));
+      
       dispatch({
         type: 'GET_TRANSACTIONS',
-        payload: res.data.data
+        payload: convertedData
       });
     } catch (err) {
       dispatch({
         type: 'TRANSACTION_ERROR',
-        payload: err.response.data.error
+        payload: "error"
       });
     }
   }
 
-  async function deleteTransaction(id) {
+  async function deleteTransaction(documentId) {
     try {
-      await axios.delete(`/api/v1/transactions/${id}`);
+      await axios.delete(`https://firestore.googleapis.com/v1/projects/myexpenses-692cf/databases/(default)/documents/expenses/${documentId}`);
 
       dispatch({
         type: 'DELETE_TRANSACTION',
-        payload: id
+        payload: documentId
       });
     } catch (err) {
       dispatch({
@@ -78,20 +88,52 @@ export const GlobalProvider = ({ children }) => {
       headers: {
         'Content-Type': 'application/json'
       }
-    }
-
+    };
+    
+    const transactionConverted = {
+      fields: {
+        text: { stringValue: transaction.text },
+        amount: { doubleValue: transaction.amount },
+        email: { stringValue: user.email }
+      }
+    };
+    
     try {
-      const res = await axios.post('/api/v1/transactions', transaction, config);
-
+      const res = await axios.post(
+        'https://firestore.googleapis.com/v1/projects/myexpenses-692cf/databases/(default)/documents/expenses',
+        transactionConverted,
+        config
+      );
+      
+      const doc = res.data.fields;
+      
+      const convertedData = {
+        text: doc.text.stringValue,
+        amount: doc.amount.doubleValue,
+        email: user.email,
+        createdAt: res.data.createTime,
+        _id: res.data.name.split('/').pop()
+      };
+      
       dispatch({
         type: 'ADD_TRANSACTION',
-        payload: res.data.data
+        payload: convertedData
       });
     } catch (err) {
-      dispatch({
-        type: 'TRANSACTION_ERROR',
-        payload: err.response.data.error
-      });
+      if (err.response && err.response.data && err.response.data.error) {
+        // Handle the error based on the structure of the error response
+        const errorMessages = err.response.data.error.errors.map(error => error.message);
+        
+        dispatch({
+          type: 'TRANSACTION_ERROR',
+          payload: errorMessages
+        });
+      } else {
+        dispatch({
+          type: 'TRANSACTION_ERROR',
+          payload: 'An error occurred while fetching transactions.'
+        });
+      }
     }
   }
 

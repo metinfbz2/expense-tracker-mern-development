@@ -5,6 +5,9 @@ import { numberWithCommas } from '../utils/format';
 export const Balance = () => {
   const { transactions, user } = useContext(GlobalContext);
 
+  // const user = {
+  //   email:'metinfbz@gmail.com'
+  // }
   
 
   const filteredTransactionsMail = transactions.filter(transaction => {
